@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIP-möte — Mötesagenda</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+  :root {
+    --bg: #f0eaf5;
+    --card: #ffffff;
+    --card-hover: #f8f4fc;
+    --border: #d8cee6;
+    --text: #2d2440;
+    --text-secondary: #7a6b8a;
+    --accent: #8b6aaf;
+    --accent-hover: #7a5a9e;
+    --section-bg: #ece4f3;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(180deg, #ddd0f0 0%, #e6daf0 30%, #f0eaf5 60%, #f7f2fa 100%);
+    min-height: 100vh;
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  header {
+    text-align: left;
+    margin-bottom: 40px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .logo-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #8b6aaf 0%, #b794d6 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(139,106,175,0.3);
+    aspect-ratio: 1/1;
+  }
+
+  .logo-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .logo-text {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+
+  header p {
+    color: var(--text-secondary);
+    font-size: 15px;
+  }
+
+  .meeting-info {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 32px;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .meeting-info strong { color: var(--accent); }
+
+  .section {
+    margin-bottom: 32px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 0 4px;
+  }
+
+  .section-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+    cursor: default;
+    box-shadow: 0 1px 3px rgba(45,36,64,0.06);
+    position: relative;
+  }
+
+  .card:hover {
+    background: var(--card-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(45,36,64,0.1);
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .drag-handle {
+    width: 20px;
+    height: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    cursor: grab;
+    opacity: 0.2;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: opacity 0.2s;
+    padding: 2px;
+    border-radius: 4px;
+  }
+
+  .drag-handle:active { cursor: grabbing; }
+  .card:hover .drag-handle { opacity: 0.5; }
+  .drag-handle:hover { opacity: 0.8 !important; background: rgba(139,106,175,0.08); }
+
+  .drag-handle span {
+    display: block;
+    width: 12px;
+    height: 2px;
+    background: var(--text-secondary);
+    border-radius: 1px;
+  }
+
+  .card.dragging { opacity: 0.4; transform: scale(0.98); }
+  .card.drag-over { border-top: 3px solid var(--accent); margin-top: -3px; }
+  .cards-container.drag-over-empty {
+    min-height: 60px;
+    border: 2px dashed var(--accent);
+    border-radius: 12px;
+    background: rgba(139,106,175,0.04);
+  }
+
+  .card-content { flex: 1; min-width: 0; }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+  .card-tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 8px;
+    font-weight: 500;
+  }
+
+  .tag-green { background: rgba(92,184,122,0.1); color: #4a9e64; }
+  .tag-yellow { background: rgba(232,168,64,0.1); color: #c89030; }
+  .tag-purple { background: rgba(139,106,175,0.1); color: var(--accent); }
+  .tag-red { background: rgba(212,80,80,0.1); color: #d45050; }
+  .tag-blue { background: rgba(70,140,220,0.1); color: #3a7ec0; }
+  .tag-pink { background: rgba(210,100,160,0.1); color: #c0507a; }
+
+  .tag-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .tag-picker-label { font-size: 12px; color: var(--text-secondary); margin-right: 2px; }
+
+  .tag-color-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .tag-color-dot:hover { transform: scale(1.2); }
+  .tag-color-dot.selected { border-color: var(--text); transform: scale(1.15); }
+
+  .tag-color-dot.dot-none { background: var(--section-bg); position: relative; }
+  .tag-color-dot.dot-none::after {
+    content: '\00d7';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .tag-color-dot.dot-green { background: rgba(92,184,122,0.35); }
+  .tag-color-dot.dot-yellow { background: rgba(232,168,64,0.35); }
+  .tag-color-dot.dot-purple { background: rgba(139,106,175,0.35); }
+  .tag-color-dot.dot-red { background: rgba(212,80,80,0.35); }
+  .tag-color-dot.dot-blue { background: rgba(70,140,220,0.35); }
+  .tag-color-dot.dot-pink { background: rgba(210,100,160,0.35); }
+
+  .tag-text-input {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--text);
+    background: white;
+    outline: none;
+    width: 140px;
+    transition: border-color 0.2s;
+  }
+
+  .tag-text-input:focus { border-color: var(--accent); }
+  .tag-text-input::placeholder { color: var(--border); }
+
+  .move-section-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .move-section-picker label { font-size: 12px; color: var(--text-secondary); }
+
+  .move-section-picker select {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--text);
+    background: white;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .move-section-picker select:focus { border-color: var(--accent); }
+
+  .add-card-btn {
+    background: none;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 8px;
+    width: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+  }
+
+  .add-card-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(139,106,175,0.04);
+  }
+
+  .add-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: var(--section-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 300;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+
+  .add-card-btn:hover .add-icon { background: rgba(139,106,175,0.15); }
+
+  .card.editing {
+    cursor: default;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(139,106,175,0.15);
+  }
+
+  .card.editing:hover { transform: none; }
+
+  .edit-title {
+    width: 100%;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--text);
+    background: none;
+    outline: none;
+    margin-bottom: 4px;
+  }
+
+  .edit-title::placeholder { color: var(--border); }
+
+  .edit-desc {
+    width: 100%;
+    border: none;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-secondary);
+    background: none;
+    outline: none;
+    resize: none;
+    line-height: 1.5;
+    min-height: 20px;
+  }
+
+  .edit-desc::placeholder { color: var(--border); }
+
+  .edit-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+  .edit-actions button {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  .btn-save { background: var(--accent); color: white; font-weight: 600; }
+  .btn-save:hover { background: var(--accent-hover); }
+  .btn-cancel { background: var(--section-bg); color: var(--text-secondary); }
+  .btn-cancel:hover { background: var(--border); }
+
+  .btn-delete {
+    margin-left: auto;
+    background: none;
+    color: var(--border);
+    font-size: 12px;
+  }
+
+  .btn-delete:hover { color: #d45050; background: rgba(212,80,80,0.08); }
+
+  .card-delete {
+    opacity: 0.25;
+    flex-shrink: 0;
+    margin-left: auto;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-top: -2px;
+  }
+
+  .card:hover .card-delete { opacity: 0.5; }
+  .card-delete:hover { opacity: 1 !important; background: rgba(212,80,80,0.08); }
+  .card-delete:hover svg circle, .card-delete:hover svg line { stroke: #d45050; }
+  .card-delete:hover svg circle[fill] { fill: #d45050; }
+  .card-delete svg { width: 18px; height: 18px; }
+
+  .card .card-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .card-edit-hint {
+    opacity: 0;
+    font-size: 11px;
+    color: var(--text-secondary);
+    transition: opacity 0.2s;
+    padding: 2px 6px;
+    cursor: pointer;
+  }
+
+  .card:hover .card-edit-hint { opacity: 0.6; }
+
+  .card.info-card {
+    cursor: default;
+    border-left: 3px solid var(--accent);
+  }
+
+  .card.info-card:hover { transform: none; }
+
+  footer {
+    text-align: center;
+    padding: 40px 20px 20px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.6;
+  }
+
+  @media (max-width: 700px) {
+    .container { padding: 24px 16px 60px; }
+    header h1 { font-size: 26px; }
+  }
+
+  .loading-msg { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 15px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="13" cy="13" r="10" fill="white" opacity="0.9"/>
+          <path d="M13 6v7l4.5 2.5" stroke="#8b6aaf" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="13" cy="13" r="2" fill="#8b6aaf" opacity="0.5"/>
+        </svg>
+      </div>
+      <span class="logo-text">SIP-möte</span>
+    </div>
+    <h1>SIP-möte — Mötesagenda</h1>
+    <p>Samordnad Individuell Plan — Punkter att ta upp</p>
+  </header>
+
+  <div class="meeting-info">
+    <strong>Datum:</strong> 14 april 2026, kl 13:15<br>
+    <strong>Deltagare:</strong> Marzena, biståndshandläggaren (Cajsa-Stina Sedgol), Karin Hedskog (Wellcare), KRY Hagastaden, Adeo Care (beslutsfattare)<br>
+    <strong>Huvudbudskap:</strong> Jag går i väggen av att ingen gör som jag säger. Samordningen faller på mig — det ska inte behövas.
+  </div>
+
+  <div id="sections-root"><p class="loading-msg">Laddar...</p></div>
+
+</div>
+
+<footer>Sparas säkert i molnet (Supabase)</footer>
+
+<script>
+  const SB_URL = 'https://dxixbtxywsvshthtiwgo.supabase.co';
+  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR4aXhidHh5d3N2c2h0aHRpd2dvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NjE1MzgsImV4cCI6MjA4ODIzNzUzOH0.87q-gad0BtcRcYHKpsKNqoJ8wTo-8jLPUizGomLboB4';
+  const TABLE = 'sip_meeting_cards';
+  const DELETE_SVG = '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="4.5" y1="4.5" x2="11.5" y2="11.5" stroke="#c4b8d4" stroke-width="1.3" stroke-linecap="round"/><line x1="11.5" y1="4.5" x2="4.5" y2="11.5" stroke="#c4b8d4" stroke-width="1.3" stroke-linecap="round"/><circle cx="4.5" cy="4.5" r="1" fill="#c4b8d4"/><circle cx="11.5" cy="4.5" r="1" fill="#c4b8d4"/><circle cx="4.5" cy="11.5" r="1" fill="#c4b8d4"/><circle cx="11.5" cy="11.5" r="1" fill="#c4b8d4"/></svg>';
+  const DRAG_SVG = '<span></span><span></span><span></span>';
+  const TAG_COLORS = ['green','yellow','purple','red','blue','pink'];
+  const SECTIONS = [
+    { key: 'adeocare', icon: '\u{1F3E0}', iconBg: 'rgba(212,80,80,0.1)', title: 'Adeo Care (hemtjänst)', addLabel: 'Lägg till punkt' },
+    { key: 'kry', icon: '\u{1FA7A}', iconBg: 'rgba(70,140,220,0.1)', title: 'KRY Haga hemvård', addLabel: 'Lägg till punkt' },
+    { key: 'wellcare', icon: '\u{1F49A}', iconBg: 'rgba(92,184,122,0.1)', title: 'Wellcare (Karin Hedskog)', addLabel: 'Lägg till punkt' },
+    { key: 'overgripande', icon: '\u{26A0}\u{FE0F}', iconBg: 'rgba(232,168,64,0.1)', title: 'Övergripande / Marzenas situation', addLabel: 'Lägg till punkt' }
+  ];
+  const SECTION_NAMES = {}; SECTIONS.forEach(s => SECTION_NAMES[s.key] = s.title);
+
+  // --- Supabase REST helpers ---
+  async function sbFetch(path, opts = {}) {
+    const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+      ...opts,
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', Prefer: opts.prefer || 'return=representation', ...opts.headers }
+    });
+    if (!res.ok) { console.error('Supabase error', res.status, await res.text()); return null; }
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
+  }
+
+  async function loadCards() { return await sbFetch(`${TABLE}?select=*&order=section,sort_order`) || []; }
+  async function insertCard(data) { return await sbFetch(TABLE, { method: 'POST', body: JSON.stringify(data) }); }
+  async function updateCard(id, data) { data.updated_at = new Date().toISOString(); return await sbFetch(`${TABLE}?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(data) }); }
+  async function deleteCard(id) { return await sbFetch(`${TABLE}?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' }); }
+
+  let allCards = [];
+
+  function escapeHtml(str) { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
+  function escapeAttr(str) { return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+
+  function renderTagHTML(color, text) {
+    if (!color || !text) return '';
+    return `<span class="card-tag tag-${escapeHtml(color)}">${escapeHtml(text)}</span>`;
+  }
+
+  function tagPickerHTML(selectedColor, tagText) {
+    const dots = ['none', ...TAG_COLORS].map(c => {
+      const sel = (c === 'none' && !selectedColor) || (c === selectedColor) ? ' selected' : '';
+      return `<div class="tag-color-dot dot-${c}${sel}" data-color="${c === 'none' ? '' : c}" onclick="event.stopPropagation(); selectTagColor(this)"></div>`;
+    }).join('');
+    const showInput = selectedColor ? '' : ' style="display:none"';
+    return `<div class="tag-picker"><span class="tag-picker-label">Tagg:</span>${dots}<input class="tag-text-input" type="text" placeholder="Tagg-text..." value="${escapeAttr(tagText || '')}"${showInput} onclick="event.stopPropagation()"></div>`;
+  }
+
+  function selectTagColor(dot) {
+    const picker = dot.closest('.tag-picker');
+    picker.querySelectorAll('.tag-color-dot').forEach(d => d.classList.remove('selected'));
+    dot.classList.add('selected');
+    const input = picker.querySelector('.tag-text-input');
+    if (dot.dataset.color) { input.style.display = ''; input.focus(); }
+    else { input.style.display = 'none'; input.value = ''; }
+  }
+
+  function getTagFromPicker(card) {
+    const picker = card.querySelector('.tag-picker');
+    if (!picker) return { color: '', text: '' };
+    const selected = picker.querySelector('.tag-color-dot.selected');
+    return { color: selected ? (selected.dataset.color || '') : '', text: picker.querySelector('.tag-text-input').value.trim() };
+  }
+
+  function sectionPickerHTML(currentSection) {
+    const options = Object.keys(SECTION_NAMES).map(key => `<option value="${key}"${key === currentSection ? ' selected' : ''}>${SECTION_NAMES[key]}</option>`).join('');
+    return `<div class="move-section-picker"><label>Flytta till:</label><select onclick="event.stopPropagation()">${options}</select></div>`;
+  }
+
+  function renderCardHTML(id, title, desc, tagColor, tagText) {
+    return `<div class="card-top"><div class="drag-handle" draggable="true">${DRAG_SVG}</div><div class="card-content"><div class="card-title">${escapeHtml(title)}</div>${desc ? '<div class="card-desc">' + escapeHtml(desc) + '</div>' : ''}${renderTagHTML(tagColor, tagText)}</div><div class="card-actions"><span class="card-edit-hint" onclick="event.stopPropagation(); editCard('${escapeAttr(id)}')">redigera</span><button class="card-delete" onclick="event.stopPropagation(); deleteAnyCard('${escapeAttr(id)}')" title="Ta bort">${DELETE_SVG}</button></div></div>`;
+  }
+
+  function renderAll(cards) {
+    allCards = cards;
+    const root = document.getElementById('sections-root');
+    root.innerHTML = '';
+
+    SECTIONS.forEach(sec => {
+      const sectionCards = cards.filter(c => c.section === sec.key).sort((a, b) => a.sort_order - b.sort_order);
+      const sectionEl = document.createElement('div');
+      sectionEl.className = 'section';
+      sectionEl.dataset.section = sec.key;
+      sectionEl.innerHTML = `<div class="section-header"><div class="section-icon" style="background: ${sec.iconBg};">${sec.icon}</div><span class="section-title">${sec.title}</span></div><div class="cards-container"></div><button class="add-card-btn" onclick="showAddForm(this, '${sec.key}')"><span class="add-icon">+</span> ${sec.addLabel}</button>`;
+
+      const container = sectionEl.querySelector('.cards-container');
+      sectionCards.forEach(data => {
+        const card = document.createElement('div');
+        card.className = 'card' + (data.is_info_card ? ' info-card' : '');
+        card.dataset.id = data.id;
+        card.innerHTML = renderCardHTML(data.id, data.title, data.description || '', data.tag_color || '', data.tag_text || '');
+        container.appendChild(card);
+        initDragForCard(card);
+      });
+
+      root.appendChild(sectionEl);
+    });
+
+    initContainerDrop();
+  }
+
+  function editCard(id) {
+    const card = document.querySelector(`.card[data-id="${id}"]`);
+    if (!card || card.classList.contains('editing')) return;
+    const currentTitle = card.querySelector('.card-title').textContent;
+    const currentDesc = card.querySelector('.card-desc') ? card.querySelector('.card-desc').textContent : '';
+    const section = card.closest('.section').dataset.section;
+    const data = allCards.find(c => c.id === id) || {};
+
+    card.className = 'card editing';
+    card.innerHTML = `<div class="card-top"><div class="card-content"><input class="edit-title" type="text" value="${escapeAttr(currentTitle)}" autofocus onclick="event.stopPropagation()"><textarea class="edit-desc" rows="2" onclick="event.stopPropagation()">${escapeHtml(currentDesc)}</textarea>${tagPickerHTML(data.tag_color || '', data.tag_text || '')}${sectionPickerHTML(section)}<div class="edit-actions"><button class="btn-save" onclick="event.stopPropagation(); saveCardEdit('${escapeAttr(id)}')">Spara</button><button class="btn-cancel" onclick="event.stopPropagation(); cancelCardEdit('${escapeAttr(id)}')">Avbryt</button><button class="btn-delete" onclick="event.stopPropagation(); deleteAnyCard('${escapeAttr(id)}')">Ta bort</button></div></div></div>`;
+
+    const textarea = card.querySelector('.edit-desc');
+    textarea.style.height = textarea.scrollHeight + 'px';
+    textarea.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'; });
+    card.querySelector('.edit-title').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); saveCardEdit(id); } if (e.key === 'Escape') cancelCardEdit(id); });
+    card.querySelector('.edit-title').focus();
+  }
+
+  async function saveCardEdit(id) {
+    const card = document.querySelector(`.card[data-id="${id}"]`);
+    const title = card.querySelector('.edit-title').value.trim();
+    const desc = card.querySelector('.edit-desc').value.trim();
+    if (!title) { card.querySelector('.edit-title').focus(); return; }
+
+    const oldSection = card.closest('.section').dataset.section;
+    const newSection = card.querySelector('.move-section-picker select').value;
+    const tag = getTagFromPicker(card);
+
+    await updateCard(id, { title, description: desc, section: newSection, tag_color: tag.color, tag_text: tag.text });
+
+    const cached = allCards.find(c => c.id === id);
+    if (cached) { cached.title = title; cached.description = desc; cached.section = newSection; cached.tag_color = tag.color; cached.tag_text = tag.text; }
+
+    card.className = 'card';
+    card.innerHTML = renderCardHTML(id, title, desc, tag.color, tag.text);
+    initDragForCard(card);
+
+    if (newSection !== oldSection) {
+      const newContainer = document.querySelector(`.section[data-section="${newSection}"] .cards-container`);
+      if (newContainer) { newContainer.appendChild(card); await saveCurrentOrder(); }
+    }
+  }
+
+  function cancelCardEdit(id) {
+    const card = document.querySelector(`.card[data-id="${id}"]`);
+    const data = allCards.find(c => c.id === id);
+    if (!data) return;
+    card.className = 'card';
+    card.innerHTML = renderCardHTML(id, data.title, data.description || '', data.tag_color || '', data.tag_text || '');
+    initDragForCard(card);
+  }
+
+  async function deleteAnyCard(id) {
+    const card = document.querySelector(`.card[data-id="${id}"]`);
+    if (!card) return;
+    card.style.transition = 'opacity 0.3s, transform 0.3s';
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(20px)';
+    setTimeout(() => card.remove(), 300);
+    await deleteCard(id);
+    allCards = allCards.filter(c => c.id !== id);
+  }
+
+  function showAddForm(btn, section) {
+    const container = btn.closest('.section').querySelector('.cards-container');
+    if (container.lastElementChild && container.lastElementChild.classList.contains('editing')) return;
+
+    const card = document.createElement('div');
+    card.className = 'card editing';
+    card.innerHTML = `<div class="card-top"><div class="card-content"><input class="edit-title" type="text" placeholder="Vad vill du ta upp?" autofocus onclick="event.stopPropagation()"><textarea class="edit-desc" placeholder="Detaljer (valfritt)" rows="1" onclick="event.stopPropagation()"></textarea>${tagPickerHTML('', '')}<div class="edit-actions"><button class="btn-save" onclick="event.stopPropagation(); saveNewCard(this, '${section}')">Spara</button><button class="btn-cancel" onclick="event.stopPropagation(); cancelAdd(this)">Avbryt</button></div></div></div>`;
+
+    container.appendChild(card);
+    const textarea = card.querySelector('.edit-desc');
+    textarea.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'; });
+    card.querySelector('.edit-title').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); saveNewCard(card.querySelector('.btn-save'), section); } if (e.key === 'Escape') cancelAdd(card.querySelector('.btn-cancel')); });
+    card.querySelector('.edit-title').focus();
+  }
+
+  async function saveNewCard(btn, section) {
+    const card = btn.closest('.card');
+    const title = card.querySelector('.edit-title').value.trim();
+    const desc = card.querySelector('.edit-desc').value.trim();
+    if (!title) { card.querySelector('.edit-title').focus(); return; }
+
+    const id = 'sip-' + Date.now();
+    const tag = getTagFromPicker(card);
+    const sectionCards = allCards.filter(c => c.section === section);
+    const sortOrder = sectionCards.length > 0 ? Math.max(...sectionCards.map(c => c.sort_order)) + 1 : 0;
+
+    const newCard = { id, title, description: desc, section, tag_color: tag.color, tag_text: tag.text, sort_order: sortOrder, is_info_card: false };
+    await insertCard(newCard);
+    allCards.push(newCard);
+
+    card.className = 'card';
+    card.dataset.id = id;
+    card.innerHTML = renderCardHTML(id, title, desc, tag.color, tag.text);
+    initDragForCard(card);
+  }
+
+  function cancelAdd(btn) { btn.closest('.card').remove(); }
+
+  // --- Drag and drop ---
+  let draggedCard = null;
+
+  function initDragForCard(card) {
+    const handle = card.querySelector('.drag-handle');
+    if (!handle) return;
+    handle.addEventListener('dragstart', function(e) {
+      e.stopPropagation(); draggedCard = card; card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', card.dataset.id);
+    });
+    handle.addEventListener('dragend', function() {
+      if (draggedCard) draggedCard.classList.remove('dragging'); draggedCard = null;
+      document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+      document.querySelectorAll('.drag-over-empty').forEach(el => el.classList.remove('drag-over-empty'));
+    });
+    card.addEventListener('dragover', function(e) {
+      e.preventDefault(); e.stopPropagation();
+      if (!draggedCard || draggedCard === card) return;
+      e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+      card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', function() { card.classList.remove('drag-over'); });
+    card.addEventListener('drop', function(e) {
+      e.preventDefault(); e.stopPropagation(); card.classList.remove('drag-over');
+      if (!draggedCard || draggedCard === card) return;
+      const container = card.closest('.cards-container');
+      container.insertBefore(draggedCard, card);
+      draggedCard.classList.remove('dragging'); saveCurrentOrder(); draggedCard = null;
+    });
+  }
+
+  function initContainerDrop() {
+    document.querySelectorAll('.cards-container').forEach(container => {
+      container.addEventListener('dragover', function(e) {
+        e.preventDefault(); if (!draggedCard) return;
+        e.dataTransfer.dropEffect = 'move';
+        if (container.querySelectorAll('.card:not(.dragging)').length === 0) container.classList.add('drag-over-empty');
+      });
+      container.addEventListener('dragleave', function() { container.classList.remove('drag-over-empty'); });
+      container.addEventListener('drop', function(e) {
+        e.preventDefault(); container.classList.remove('drag-over-empty');
+        if (!draggedCard) return;
+        if (e.target === container || e.target.closest('.cards-container') === container) {
+          container.appendChild(draggedCard); draggedCard.classList.remove('dragging');
+          saveCurrentOrder(); draggedCard = null;
+        }
+      });
+    });
+  }
+
+  async function saveCurrentOrder() {
+    const updates = [];
+    document.querySelectorAll('.section').forEach(section => {
+      const sectionKey = section.dataset.section;
+      let order = 0;
+      section.querySelectorAll('.cards-container .card[data-id]').forEach(card => {
+        const id = card.dataset.id;
+        updates.push({ id, section: sectionKey, sort_order: order });
+        const cached = allCards.find(c => c.id === id);
+        if (cached) { cached.section = sectionKey; cached.sort_order = order; }
+        order++;
+      });
+    });
+    await Promise.all(updates.map(u => updateCard(u.id, { section: u.section, sort_order: u.sort_order })));
+  }
+
+  // --- Init ---
+  (async function() {
+    const cards = await loadCards();
+    renderAll(cards);
+  })();
+</script>
+</body>
+</html>
